@@ -57,17 +57,9 @@ export default function ChatList({
     return null;
   }, []);
 
-  // Before DOM paints: snapshot anchor
-  // We detect when messages change by comparing the first message id.
   const currentFirstId = allMessages[0]?.id ?? null;
 
-  // Save anchor before the render that changes messages
-  if (currentFirstId !== prevFirstIdRef.current && prevFirstIdRef.current !== null) {
-    // Messages changed — we need the anchor from before this render.
-    // anchorRef.current was already set during the previous render's commit phase.
-  }
-
-  // After every paint, snapshot the current anchor for the next render
+  // After every paint, snapshot the current scroll anchor for the next render
   useEffect(() => {
     if (!isAnimatingRef.current) {
       anchorRef.current = getFirstVisibleAnchor();

@@ -1,73 +1,32 @@
-# React + TypeScript + Vite
+# 飞书聊天消息跳转历史消息 Demo
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+一个模拟飞书聊天消息列表的 Demo，实现了跳转历史消息、分段加载与合并、平滑滚动等核心功能。
 
-Currently, two official plugins are available:
+## 功能特性
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. **跳转历史消息** - 输入消息编号或点击快捷按钮，跳转到任意历史消息位置，带有平滑滚动动画
+2. **分段加载** - 跳转时加载目标消息前后各 30 条消息，形成独立消息段
+3. **无限滚动** - 跳转后可继续上下滚动，动态加载更早或更晚的消息
+4. **消息段合并** - 当不同消息段通过滚动加载产生重叠或相邻时，自动合并为一个连续段
+5. **滚动位置保持** - 加载新消息时通过锚点机制保持滚动位置，避免画面跳动
+6. **仿飞书 UI** - 采用飞书风格的配色和布局
 
-## React Compiler
+## 技术方案
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **消息段 (Segment)**: 每次加载的消息形成一个独立段，包含 `hasMoreBefore/hasMoreAfter` 标记
+- **滚动锚点**: 在加载前记录当前第一个可见消息及其视觉偏移，加载后通过 `useLayoutEffect` 恢复
+- **平滑动画**: 自定义 `smoothScrollTo` 函数，使用 `easeInOutCubic` 缓动
+- **段合并**: 基于消息 ID 排序，检测重叠或相邻段并合并
 
-## Expanding the ESLint configuration
+## 运行
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+cd feishu-chat-demo
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 技术栈
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- React 19 + TypeScript
+- Vite 8

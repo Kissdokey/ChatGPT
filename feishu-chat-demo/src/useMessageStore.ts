@@ -52,6 +52,15 @@ export function useMessageStore() {
   const [loading, setLoading] = useState(false);
   const [jumpingToId, setJumpingToId] = useState<number | null>(null);
   const loadingRef = useRef(false);
+  const segmentsRef = useRef<Segment[]>([]);
+
+  const updateSegments = useCallback((updater: (prev: Segment[]) => Segment[]) => {
+    setSegments(prev => {
+      const next = updater(prev);
+      segmentsRef.current = next;
+      return next;
+    });
+  }, []);
 
   const loadInitial = useCallback(async () => {
     if (loadingRef.current) return;
@@ -65,36 +74,29 @@ export function useMessageStore() {
         hasMoreBefore: result.hasMoreBefore,
         hasMoreAfter: result.hasMoreAfter,
       };
-      setSegments([seg]);
+      updateSegments(() => [seg]);
     } finally {
       setLoading(false);
       loadingRef.current = false;
     }
-  }, []);
+  }, [updateSegments]);
 
   const loadBefore = useCallback(async (segmentId: string) => {
     if (loadingRef.current) return;
     loadingRef.current = true;
     setLoading(true);
     try {
-      let firstMsgId: number | null = null;
-      setSegments(prev => {
-        const seg = prev.find(s => s.id === segmentId);
-        if (seg && seg.hasMoreBefore && seg.messages.length > 0) {
-          firstMsgId = seg.messages[0].id;
-        }
-        return prev;
-      });
-
-      if (firstMsgId === null) {
+      const seg = segmentsRef.current.find(s => s.id === segmentId);
+      if (!seg || !seg.hasMoreBefore || seg.messages.length === 0) {
         setLoading(false);
         loadingRef.current = false;
         return;
       }
 
+      const firstMsgId = seg.messages[0].id;
       const result = await fetchMessagesBefore(firstMsgId);
 
-      setSegments(prev => {
+      updateSegments(prev => {
         if (result.messages.length === 0) {
           return prev.map(s =>
             s.id === segmentId ? { ...s, hasMoreBefore: false } : s
@@ -114,31 +116,24 @@ export function useMessageStore() {
       setLoading(false);
       loadingRef.current = false;
     }
-  }, []);
+  }, [updateSegments]);
 
   const loadAfter = useCallback(async (segmentId: string) => {
     if (loadingRef.current) return;
     loadingRef.current = true;
     setLoading(true);
     try {
-      let lastMsgId: number | null = null;
-      setSegments(prev => {
-        const seg = prev.find(s => s.id === segmentId);
-        if (seg && seg.hasMoreAfter && seg.messages.length > 0) {
-          lastMsgId = seg.messages[seg.messages.length - 1].id;
-        }
-        return prev;
-      });
-
-      if (lastMsgId === null) {
+      const seg = segmentsRef.current.find(s => s.id === segmentId);
+      if (!seg || !seg.hasMoreAfter || seg.messages.length === 0) {
         setLoading(false);
         loadingRef.current = false;
         return;
       }
 
+      const lastMsgId = seg.messages[seg.messages.length - 1].id;
       const result = await fetchMessagesAfter(lastMsgId);
 
-      setSegments(prev => {
+      updateSegments(prev => {
         if (result.messages.length === 0) {
           return prev.map(s =>
             s.id === segmentId ? { ...s, hasMoreAfter: false } : s
@@ -158,24 +153,16 @@ export function useMessageStore() {
       setLoading(false);
       loadingRef.current = false;
     }
-  }, []);
+  }, [updateSegments]);
 
   const jumpToMessage = useCallback(async (messageId: number) => {
     if (loadingRef.current) return;
 
-    // Check if already loaded
-    let found = false;
-    setSegments(prev => {
-      for (const seg of prev) {
-        if (seg.messages.some(m => m.id === messageId)) {
-          found = true;
-          break;
-        }
-      }
-      return prev;
-    });
+    const alreadyLoaded = segmentsRef.current.some(seg =>
+      seg.messages.some(m => m.id === messageId)
+    );
 
-    if (found) {
+    if (alreadyLoaded) {
       setJumpingToId(messageId);
       return;
     }
@@ -186,7 +173,7 @@ export function useMessageStore() {
       const result = await fetchMessagesAround(messageId);
       if (result.messages.length === 0) return;
 
-      setSegments(prev => {
+      updateSegments(prev => {
         const newSeg: Segment = {
           id: nextSegmentId(),
           messages: result.messages,
@@ -200,7 +187,7 @@ export function useMessageStore() {
       setLoading(false);
       loadingRef.current = false;
     }
-  }, []);
+  }, [updateSegments]);
 
   const clearJumpTarget = useCallback(() => {
     setJumpingToId(null);
